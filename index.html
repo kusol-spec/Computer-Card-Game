@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🖥️ Computer Card Game</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --border:#334155;--radius:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;min-height:100vh}
+h1{font-size:20px;font-weight:600}
+h2{font-size:16px;font-weight:500}
+h3{font-size:14px;font-weight:500}
+
+/* ===== LAYOUT ===== */
+#app{max-width:900px;margin:0 auto;padding:12px}
+.screen{display:none}
+.screen.active{display:block}
+
+/* ===== LOBBY ===== */
+#lobby{max-width:480px;margin:40px auto}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{font-size:28px;margin-bottom:4px}
+.logo p{color:var(--text2);font-size:14px}
+.card-lobby{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+.card-lobby h2{margin-bottom:14px;color:var(--text)}
+.input-row{display:flex;gap:8px;margin-bottom:10px}
+input[type=text]{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;width:100%;outline:none;transition:border .2s}
+input[type=text]:focus{border-color:var(--blue)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s,transform .1s}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-amber{background:var(--amber);color:#000}
+.btn-danger{background:var(--red);color:#fff}
+.btn-ghost{background:var(--bg3);color:var(--text)}
+.divider{text-align:center;color:var(--text3);font-size:13px;margin:12px 0}
+.room-id-box{background:var(--bg3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.room-id-box span{font-family:monospace;font-size:15px;color:var(--green);font-weight:600;letter-spacing:1px}
+.copy-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text2);font-size:12px;cursor:pointer}
+.copy-btn:hover{background:var(--bg2)}
+.player-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.player-list li{background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:13px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.dot.you{background:var(--amber)}
+.status-msg{font-size:13px;color:var(--text2);text-align:center;padding:8px}
+.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--text3);margin-left:auto}
+.tag.host{background:#1e3a5f;color:#60a5fa}
+
+/* ===== GAME ===== */
+#game-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.game-title{font-size:16px;font-weight:600}
+.status-pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2)}
+.pill b{color:var(--text)}
+
+.opponents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px}
+.opponent-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px}
+.opponent-card.active-turn{border-color:var(--green);box-shadow:0 0 8px rgba(34,197,94,.25)}
+.opp-name{font-size:12px;font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.opp-cards{display:flex;flex-wrap:wrap;gap:3px}
+.card-mini{width:22px;height:30px;border-radius:4px;background:var(--bg3);border:1px solid var(--border)}
+
+.pile-area{display:flex;gap:16px;align-items:center;justify-content:center;margin:10px 0}
+.card{width:72px;height:100px;border-radius:10px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;position:relative;flex-shrink:0;font-size:10px;color:#fff;transition:transform .15s,box-shadow .15s;border:2px solid transparent}
+.card.clickable{cursor:pointer}
+.card.clickable:hover{transform:translateY(-6px)}
+.card.playable{border-color:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5)}
+.card.selected{transform:translateY(-12px) !important;border-color:var(--amber);box-shadow:0 0 10px rgba(245,158,11,.5)}
+.card-back-style{background:#1e3a5f;border:2px solid #2563eb}
+.card-back-style::after{content:'💻';font-size:24px}
+.cv{font-size:9px;position:absolute;top:4px;left:5px;line-height:1}
+.cv2{font-size:9px;position:absolute;bottom:4px;right:5px;transform:rotate(180deg)}
+.ci{font-size:22px;text-align:center}
+.cn{font-size:8px;position:absolute;bottom:16px;text-align:center;width:100%;color:rgba(255,255,255,.85)}
+.pile-label{font-size:11px;color:var(--text3);text-align:center;margin-top:4px}
+
+.my-hand-area{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
+.my-hand-area.my-turn{border-color:var(--green)}
+.hand-label{font-size:12px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.my-cards{display:flex;flex-wrap:wrap;gap:5px;min-height:106px}
+
+.action-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.color-picker{display:flex;gap:8px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.color-picker span{font-size:13px;color:var(--text2)}
+.cbtn{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .1s}
+.cbtn:hover{transform:scale(1.2)}
+
+.game-log{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;max-height:100px;overflow-y:auto;margin-bottom:10px}
+.log-line{font-size:12px;color:var(--text2);padding:2px 0;border-bottom:1px solid var(--bg3)}
+.log-line:last-child{border:none;color:var(--text)}
+
+.badge{font-size:11px;padding:2px 8px;border-radius:20px}
+.badge-green{background:#14532d;color:#86efac}
+.badge-amber{background:#451a03;color:#fcd34d}
+.badge-red{background:#450a0a;color:#fca5a5}
+
+.uno-alert{background:#451a03;border:1px solid var(--amber);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--amber);margin-bottom:8px;text-align:center}
+
+/* ===== OVERLAY ===== */
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;display:none}
+.overlay.show{display:flex}
+.overlay-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;text-align:center;max-width:360px;width:90%}
+.overlay-box h2{margin-bottom:8px}
+.overlay-box p{font-size:13px;color:var(--text2);margin-bottom:18px}
+.score-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bg3)}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 18px;font-size:13px;color:#f1f5f9;display:none;z-index:200;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen active">
+  <div id="lobby">
+    <div class="logo">
+      <h1>🖥️ Computer Card Game</h1>
+      <p>เกมไพ่อุปกรณ์คอมพิวเตอร์ — เล่นออนไลน์ได้เลย</p>
+    </div>
+    <div class="card-lobby">
+      <h2>ชื่อของคุณ</h2>
+      <input type="text" id="my-name" placeholder="ใส่ชื่อ..." maxlength="16" value="ผู้เล่น" style="margin-bottom:0">
+    </div>
+    <div class="card-lobby">
+      <h2>🏠 สร้างห้องใหม่</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">สร้างห้อง แชร์รหัสให้เพื่อน แล้วกด Start</p>
+      <button class="btn btn-green" onclick="createRoom()" style="width:100%">+ สร้างห้อง</button>
+    </div>
+    <div class="divider">— หรือ —</div>
+    <div class="card-lobby">
+      <h2>🔗 เข้าร่วมห้อง</h2>
+      <div class="input-row">
+        <input type="text" id="join-code" placeholder="ใส่รหัสห้อง..." maxlength="8" style="text-transform:uppercase;letter-spacing:2px">
+        <button class="btn btn-primary" onclick="joinRoom()">เข้าร่วม</button>
+      </div>
+    </div>
+    <div id="lobby-status" class="status-msg"></div>
+  </div>
+</div>
+
+<!-- WAITING ROOM -->
+<div id="screen-waiting" class="screen">
+  <div id="lobby" style="margin-top:30px">
+    <div class="card-lobby">
+      <h2>🏠 ห้องรอ</h2>
+      <div class="room-id-box">
+        <div>รหัสห้อง: <span id="room-code-display">------</span></div>
+        <button class="copy-btn" onclick="copyCode()">📋 คัดลอก</button>
+      </div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">แชร์รหัสให้เพื่อน (รองรับ 2–6 คน)</p>
+      <ul class="player-list" id="waiting-players"></ul>
+      <div id="waiting-actions"></div>
+    </div>
+    <div id="waiting-status" class="status-msg">รอผู้เล่นเข้าร่วม...</div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div id="game-header">
+    <div class="game-title">🖥️ Computer Card Game</div>
+    <div class="status-pills">
+      <div class="pill">ตา: <b id="turn-name">-</b></div>
+      <div class="pill">สี: <b id="cur-color-txt">-</b></div>
+      <div class="pill">ทิศ: <b id="dir-txt">→</b></div>
+    </div>
+  </div>
+
+  <div class="opponents-grid" id="opponents-area"></div>
+
+  <div class="pile-area">
+    <div>
+      <div class="card card-back-style clickable" id="draw-pile-card" onclick="drawCard()" title="จั่วไพ่"></div>
+      <div class="pile-label">จั่ว (<span id="deck-cnt">0</span>)</div>
+    </div>
+    <div>
+      <div class="card" id="discard-card" style="background:#334155"></div>
+      <div class="pile-label">กองทิ้ง</div>
+    </div>
+  </div>
+
+  <div id="color-picker" class="color-picker" style="display:none">
+    <span>เลือกสี:</span>
+    <div class="cbtn" style="background:#ef4444" onclick="pickColor('red')" title="แดง"></div>
+    <div class="cbtn" style="background:#3b82f6" onclick="pickColor('blue')" title="น้ำเงิน"></div>
+    <div class="cbtn" style="background:#22c55e" onclick="pickColor('green')" title="เขียว"></div>
+    <div class="cbtn" style="background:#f59e0b" onclick="pickColor('yellow')" title="เหลือง"></div>
+  </div>
+
+  <div id="uno-alert" class="uno-alert" style="display:none">⚠️ มีคนเหลือไพ่ใบเดียว!</div>
+
+  <div class="my-hand-area" id="my-hand-area">
+    <div class="hand-label">
+      <span>🙋 ไพ่ของคุณ (<span id="my-card-cnt">0</span> ใบ)</span>
+      <span id="my-turn-badge"></span>
+    </div>
+    <div class="my-cards" id="my-cards"></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-ghost" onclick="drawCard()" id="btn-draw">จั่วไพ่</button>
+    <button class="btn btn-amber" onclick="sayUno()" id="btn-uno">UNO!</button>
+    <button class="btn btn-ghost" onclick="showLog()" style="margin-left:auto;font-size:12px">📋 ล็อก</button>
+    <button class="btn btn-danger" onclick="leaveGame()" style="font-size:12px">ออก</button>
+  </div>
+
+  <div class="game-log" id="game-log"></div>
+</div>
+
+</div>
+
+<!-- Overlays -->
+<div class="overlay" id="overlay-win">
+  <div class="overlay-box">
+    <h2 id="win-title">🏆 ชนะ!</h2>
+    <p id="win-sub"></p>
+    <div id="win-scores" style="margin-bottom:18px"></div>
+    <button class="btn btn-primary" onclick="backToLobby()">🏠 กลับหน้าหลัก</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===== CARD ENGINE =====
+const COLORS=['red','blue','green','yellow'];
+const CNAME={red:'แดง',blue:'น้ำเงิน',green:'เขียว',yellow:'เหลือง'};
+const CHEX={red:'#ef4444',blue:'#3b82f6',green:'#22c55e',yellow:'#f59e0b'};
+const PARTS=['CPU','RAM','GPU','HDD','PSU','MOBO','CASE','MON','KB','MOUSE'];
+const PICO={CPU:'⚙️',RAM:'💾',GPU:'🖼️',HDD:'💿',PSU:'🔌',MOBO:'🔧',CASE:'🗄️',MON:'🖥️',KB:'⌨️',MOUSE:'🖱️'};
+
+function mkCard(c,v,id){return{color:c,value:v,id:id||Math.random().toString(36).slice(2)}}
+function buildDeck(){
+  let d=[];
+  COLORS.forEach(c=>{
+    d.push(mkCard(c,'0'));
+    ['1','2','3','4','5','6','7','8','9','skip','reverse','draw2'].forEach(v=>{d.push(mkCard(c,v));d.push(mkCard(c,v));});
+  });
+  for(let i=0;i<4;i++){d.push(mkCard('wild','wild'));d.push(mkCard('wild','wild4'));}
+  return d;
+}
+function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function cardBg(c){
+  if(c.color==='wild')return'conic-gradient(#ef4444 0 25%,#3b82f6 25% 50%,#22c55e 50% 75%,#f59e0b 75%)';
+  return CHEX[c.color]||'#555';
+}
+function cardIcon(c){
+  const sico={skip:'🚫',reverse:'🔄',draw2:'✌️',wild:'🌈',wild4:'🌈'};
+  if(sico[c.value])return sico[c.value];
+  return PICO[PARTS[parseInt(c.value)%10]]||c.value;
+}
+function cardSub(c){
+  const s={skip:'Skip',reverse:'Rev',draw2:'+2',wild:'Wild',wild4:'Wild+4'};
+  if(s[c.value])return s[c.value];
+  return PARTS[parseInt(c.value)%10];
+}
+function cardValLabel(c){if(c.color==='wild'||c.value==='wild4')return'🌈';return c.value;}
+function canPlay(c,curColor,curValue){
+  if(c.color==='wild')return true;
+  if(c.color===curColor)return true;
+  if(c.value===curValue)return true;
+  return false;
+}
+
+// ===== PEER STATE =====
+let peer=null,myId=null,myName='',isHost=false;
+let connections={};   // peerId -> DataConnection
+let roomPlayers=[];   // [{id,name}]  order = turn order
+let roomCode='';
+
+// ===== GAME STATE (host is source of truth) =====
+let GS=null;
+/*
+GS = {
+  deck:[],discard:[],
+  players:[{id,name,handCount}],  // public info
+  hands:{peerId:[cards]},          // private; host only
+  currentIdx:0,direction:1,currentColor:'red',currentValue:'0',
+  waitColor:false, phase:'playing'|'ended'
+}
+*/
+let myHand=[];  // client's own hand (received from host)
+let gamePhase='lobby'; // lobby|waiting|game
+
+// ===== UI HELPERS =====
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
+function toast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',dur);}
+function log(msg){const l=document.getElementById('game-log');const d=document.createElement('div');d.className='log-line';d.textContent=msg;l.appendChild(d);l.scrollTop=l.scrollHeight;}
+function setLobbyStatus(msg){document.getElementById('lobby-status').textContent=msg;}
+
+// ===== PEER SETUP =====
+function initPeer(callback){
+  if(typeof Peer==='undefined'){alert('PeerJS ยังโหลดไม่เสร็จ กรุณารีเฟรชหน้า');return;}
+  const id='CCG'+Math.random().toString(36).slice(2,8).toUpperCase();
+  peer=new Peer(id,{debug:0});
+  peer.on('open',pid=>{myId=pid;callback && callback(pid);});
+  peer.on('connection',conn=>hostHandleConn(conn));
+  peer.on('error',err=>{toast('เชื่อมต่อผิดพลาด: '+err.type);setLobbyStatus('ผิดพลาด: '+err.message);});
+}
+
+// ===== CREATE ROOM =====
+function createRoom(){
+  myName=document.getElementById('my-name').value.trim()||'Host';
+  isHost=true;
+  setLobbyStatus('กำลังสร้างห้อง...');
+  initPeer(pid=>{
+    roomCode=pid.replace('CCG','').slice(0,6);
+    // actually use full peer id as code
+    roomCode=pid;
+    roomPlayers=[{id:myId,name:myName}];
+    showWaitingRoom();
+  });
+}
+
+// ===== JOIN ROOM =====
+function joinRoom(){
+  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  if(!code){toast('ใส่รหัสห้องก่อน');return;}
+  myName=document.getElementById('my-name').value.trim()||'Guest';
+  isHost=false;
+  setLobbyStatus('กำลังเชื่อมต่อ...');
+  initPeer(()=>{
+    const conn=peer.connect(code,{reliable:true,metadata:{name:myName}});
+    connections['host']=conn;
+    conn.on('open',()=>{
+      send('host',{type:'JOIN',name:myName,id:myId});
+      setLobbyStatus('รอการตอบรับ...');
+    });
+    conn.on('data',msg=>handleHostMsg(msg));
+    conn.on('close',()=>{toast('การเชื่อมต่อหลุด');backToLobby();});
+    conn.on('error',e=>{toast('เชื่อมต่อไม่ได้: '+e);setLobbyStatus('ไม่พบห้อง ลองรหัสใหม่');});
+  });
+}
+
+// ===== HOST: handle incoming connections =====
+function hostHandleConn(conn){
+  conn.on('open',()=>{
+    const pid=conn.peer;
+    connections[pid]=conn;
+    conn.on('data',msg=>hostHandleMsg(pid,msg));
+    conn.on('close',()=>{
+      delete connections[pid];
+      roomPlayers=roomPlayers.filter(p=>p.id!==pid);
+      if(gamePhase==='waiting'){broadcastRoomUpdate();updateWaitingUI();}
+      else if(gamePhase==='game'&&GS){hostPlayerLeft(pid);}
+    });
+  });
+}
+
+function hostHandleMsg(pid,msg){
+  if(msg.type==='JOIN'){
+    if(roomPlayers.length>=6){send(pid,{type:'REJECT',reason:'ห้องเต็มแล้ว (6 คน)'});return;}
+    if(gamePhase!=='waiting'){send(pid,{type:'REJECT',reason:'เกมเริ่มแล้ว'});return;}
+    roomPlayers.push({id:pid,name:msg.name});
+    broadcastRoomUpdate();
+    updateWaitingUI();
+  }
+  if(msg.type==='PLAY_CARD')hostReceivePlay(pid,msg);
+  if(msg.type==='DRAW_CARD')hostReceiveDraw(pid);
+  if(msg.type==='PICK_COLOR')hostReceiveColor(pid,msg.color);
+  if(msg.type==='SAY_UNO')hostReceiveUno(pid);
+}
+
+// ===== CLIENT: handle messages from host =====
+function handleHostMsg(msg){
+  if(msg.type==='REJECT'){toast('ไม่ได้รับอนุญาต: '+msg.reason);setLobbyStatus(msg.reason);return;}
+  if(msg.type==='ROOM_UPDATE'){
+    roomPlayers=msg.players;
+    roomCode=msg.hostId;
+    showWaitingRoom();
+    updateWaitingUI();
+  }
+  if(msg.type==='GAME_START'){
+    myHand=msg.hand;
+    GS=msg.state;
+    gamePhase='game';
+    showScreen('game');
+    renderGame();
+    log('🎮 เกมเริ่มแล้ว!');
+  }
+  if(msg.type==='GAME_STATE'){
+    GS=msg.state;
+    if(msg.hand)myHand=msg.hand;
+    renderGame();
+    if(msg.logMsg)log(msg.logMsg);
+  }
+  if(msg.type==='HAND_UPDATE'){myHand=msg.hand;renderMyHand();}
+  if(msg.type==='GAME_OVER'){showWinner(msg);gamePhase='lobby';}
+}
+
+// ===== MESSAGING =====
+function send(target,data){
+  if(target==='host'){connections['host']&&connections['host'].send(data);}
+  else{connections[target]&&connections[target].send(data);}
+}
+function broadcast(data,excludeSelf){
+  Object.keys(connections).forEach(pid=>connections[pid].send(data));
+}
+function broadcastRoomUpdate(){
+  broadcast({type:'ROOM_UPDATE',players:roomPlayers,hostId:myId});
+}
+
+// ===== WAITING ROOM UI =====
+function showWaitingRoom(){
+  gamePhase='waiting';
+  showScreen('waiting');
+  document.getElementById('room-code-display').textContent=isHost?myId:(roomCode||myId);
+  updateWaitingUI();
+}
+function updateWaitingUI(){
+  const ul=document.getElementById('waiting-players');
+  ul.innerHTML='';
+  roomPlayers.forEach(p=>{
+    const li=document.createElement('li');
+    const isMe=p.id===myId;
+    const isHostP=roomPlayers[0]?.id===p.id;
+    li.innerHTML=`<div class="dot ${isMe?'you':''}"></div>${p.name}${isMe?' (คุณ)':''}${isHostP?'<span class="tag host">Host</span>':'<span class="tag">ผู้เล่น</span>'}`;
+    ul.appendChild(li);
+  });
+  const wa=document.getElementById('waiting-actions');
+  if(isHost){
+    wa.innerHTML=`<button class="btn btn-green" onclick="hostStartGame()" ${roomPlayers.length<2?'disabled':''} style="width:100%">▶ เริ่มเกม (${roomPlayers.length} คน)</button>`;
+  } else {
+    wa.innerHTML='<div style="font-size:13px;color:var(--text2);text-align:center">รอ Host เริ่มเกม...</div>';
+  }
+  document.getElementById('waiting-status').textContent=`ผู้เล่น ${roomPlayers.length}/6`;
+}
+function copyCode(){
+  const code=document.getElementById('room-code-display').textContent;
+  navigator.clipboard.writeText(code).then(()=>toast('คัดลอกรหัสแล้ว!')).catch(()=>toast(code));
+}
+
+// ===== HOST: START GAME =====
+function hostStartGame(){
+  if(roomPlayers.length<2){toast('ต้องการอย่างน้อย 2 คน');return;}
+  let deck=shuffle(buildDeck());
+  const hands={};
+  roomPlayers.forEach(p=>{hands[p.id]=[];for(let i=0;i<7;i++)hands[p.id].push(deck.pop());});
+  let start;do{start=deck.pop();}while(['wild','wild4','skip','reverse','draw2'].includes(start.value));
+  GS={
+    deck,
+    discard:[start],
+    players:roomPlayers.map(p=>({id:p.id,name:p.name,handCount:7})),
+    hands,
+    currentIdx:0,direction:1,
+    currentColor:start.color,currentValue:start.value,
+    waitColor:false,phase:'playing'
+  };
+  gamePhase='game';
+  // send each player their hand + public state
+  roomPlayers.forEach(p=>{
+    const pubState=publicState();
+    if(p.id===myId){
+      myHand=GS.hands[myId];
+      showScreen('game');renderGame();log('🎮 เกมเริ่มแล้ว!');
+    } else {
+      send(p.id,{type:'GAME_START',hand:GS.hands[p.id],state:pubState});
+    }
+  });
+}
+
+function publicState(){
+  return {
+    players:GS.players,
+    deckCount:GS.deck.length,
+    discardTop:GS.discard[GS.discard.length-1],
+    currentIdx:GS.currentIdx,direction:GS.direction,
+    currentColor:GS.currentColor,currentValue:GS.currentValue,
+    waitColor:GS.waitColor,phase:GS.phase
+  };
+}
+function hostBroadcastState(logMsg){
+  const pub=publicState();
+  // send each player their updated hand too
+  roomPlayers.forEach(p=>{
+    if(p.id===myId){
+      myHand=GS.hands[myId];renderGame();if(logMsg)log(logMsg);
+    } else {
+      send(p.id,{type:'GAME_STATE',state:pub,hand:GS.hands[p.id],logMsg});
+    }
+  });
+}
+
+// ===== HOST: GAME LOGIC =====
+function hostDrawFrom(){
+  if(GS.deck.length===0){let top=GS.discard.pop();GS.deck=shuffle(GS.discard);GS.discard=[top];}
+  return GS.deck.pop();
+}
+function hostNextIdx(){
+  let n=GS.currentIdx+GS.direction;
+  if(n>=GS.players.length)n=0;if(n<0)n=GS.players.length-1;return n;
+}
+function hostAdvance(){GS.currentIdx=hostNextIdx();}
+function hostSkipNext(){hostAdvance();hostAdvance();}
+
+function hostReceivePlay(pid,msg){
+  if(GS.phase!=='playing'||GS.waitColor)return;
+  const pIdx=GS.players.findIndex(p=>p.id===pid);
+  if(pIdx!==GS.currentIdx)return;
+  const hand=GS.hands[pid];
+  const cIdx=hand.findIndex(c=>c.id===msg.cardId);
+  if(cIdx<0)return;
+  const card=hand[cIdx];
+  if(!canPlay(card,GS.currentColor,GS.currentValue))return;
+  hand.splice(cIdx,1);
+  GS.players[pIdx].handCount=hand.length;
+  GS.discard.push(card);
+  GS.currentValue=card.value;
+  if(card.color!=='wild')GS.currentColor=card.color;
+  const pName=GS.players[pIdx].name;
+  if(hand.length===0){hostEndGame(pIdx);return;}
+  let logMsg=`${pName} ทิ้ง ${cardSub(card)}`;
+  if(card.value==='wild'||card.value==='wild4'){
+    GS.waitColor=true;
+    if(card.value==='wild4'){
+      const opp=GS.players[hostNextIdx()];
+      const oppHand=GS.hands[opp.id];
+      for(let i=0;i<4;i++)oppHand.push(hostDrawFrom());
+      GS.players[hostNextIdx()].handCount=oppHand.length;
+      logMsg+=` — ${opp.name} จั่ว 4 ใบ!`;
+    }
+    hostBroadcastState(logMsg);return;
+  }
+  hostApplySpecial(card,pIdx,pName);
+}
+function hostApplySpecial(card,pIdx,pName){
+  const ni=hostNextIdx();
+  const oName=GS.players[ni].name;
+  let logMsg='';
+  if(card.value==='skip'){hostAdvance();hostAdvance();logMsg=`${pName} ข้ามตา ${oName}`;}
+  else if(card.value==='reverse'){GS.direction*=-1;hostAdvance();logMsg=`${pName} เปลี่ยนทิศทาง`;}
+  else if(card.value==='draw2'){
+    const opp=GS.players[ni];
+    const oppHand=GS.hands[opp.id];
+    oppHand.push(hostDrawFrom());oppHand.push(hostDrawFrom());
+    GS.players[ni].handCount=oppHand.length;
+    hostAdvance();hostAdvance();
+    logMsg=`${pName} ทำให้ ${oName} จั่ว 2 ใบ`;
+  } else {hostAdvance();logMsg=`${pName} ทิ้ง ${cardSub(card)}`;}
+  hostBroadcastState(logMsg);
+}
+function hostReceiveDraw(pid){
+  if(GS.phase!=='playing'||GS.waitColor)return;
+  const pIdx=GS.players.findIndex(p=>p.id===pid);
+  if(pIdx!==GS.currentIdx)return;
+  const card=hostDrawFrom();
+  GS.hands[pid].push(card);
+  GS.players[pIdx].handCount=GS.hands[pid].length;
+  hostAdvance();
+  hostBroadcastState(`${GS.players[pIdx].name} จั่วไพ่`);
+}
+function hostReceiveColor(pid,color){
+  if(!GS.waitColor)return;
+  const pIdx=GS.players.findIndex(p=>p.id===pid);
+  if(pIdx!==GS.currentIdx&&!(pIdx===(GS.currentIdx)))return;
+  GS.currentColor=color;GS.waitColor=false;
+  hostAdvance();
+  hostBroadcastState(`เลือกสี ${CNAME[color]}`);
+}
+function hostReceiveUno(pid){log(`🗣️ ${GS.players.find(p=>p.id===pid)?.name} ร้อง UNO!`);}
+function hostPlayerLeft(pid){
+  if(!GS)return;
+  GS.players=GS.players.filter(p=>p.id!==pid);
+  delete GS.hands[pid];
+  if(GS.currentIdx>=GS.players.length)GS.currentIdx=0;
+  if(GS.players.length<2){hostBroadcastState('ผู้เล่นออกจากเกม เกมจบ');return;}
+  hostBroadcastState('ผู้เล่นออกจากเกม');
+}
+function hostEndGame(winnerIdx){
+  GS.phase='ended';
+  const pub=publicState();
+  const scores=GS.players.map((p,i)=>({name:p.name,cards:GS.hands[p.id].length,winner:i===winnerIdx})).sort((a,b)=>a.cards-b.cards);
+  const payload={type:'GAME_OVER',winner:GS.players[winnerIdx].name,scores};
+  roomPlayers.forEach(p=>{
+    if(p.id===myId)showWinner(payload);
+    else send(p.id,payload);
+  });
+}
+
+// ===== CLIENT ACTIONS =====
+function playCard(cardId){
+  if(!GS||GS.waitColor)return;
+  const myIdx=GS.players.findIndex(p=>p.id===myId);
+  if(myIdx!==GS.currentIdx)return;
+  const card=myHand.find(c=>c.id===cardId);
+  if(!card||!canPlay(card,GS.currentColor,GS.currentValue))return;
+  if(isHost)hostReceivePlay(myId,{cardId});
+  else send('host',{type:'PLAY_CARD',cardId});
+}
+function drawCard(){
+  if(!GS||GS.waitColor)return;
+  const myIdx=GS.players.findIndex(p=>p.id===myId);
+  if(myIdx!==GS.currentIdx)return;
+  if(isHost)hostReceiveDraw(myId);
+  else send('host',{type:'DRAW_CARD'});
+}
+function pickColor(color){
+  document.getElementById('color-picker').style.display='none';
+  if(isHost)hostReceiveColor(myId,color);
+  else send('host',{type:'PICK_COLOR',color});
+}
+function sayUno(){
+  if(isHost)hostReceiveUno(myId);
+  else send('host',{type:'SAY_UNO'});
+  toast('🗣️ UNO!');
+}
+
+// ===== RENDER GAME =====
+function renderCardEl(c,clickable,sel){
+  const d=document.createElement('div');
+  d.className='card'+(clickable?' clickable playable':'')+(sel?' selected':'');
+  d.style.background=cardBg(c);
+  d.innerHTML=`<div class="cv">${cardValLabel(c)}</div><div class="ci">${cardIcon(c)}</div><div class="cn">${cardSub(c)}</div><div class="cv2">${cardValLabel(c)}</div>`;
+  if(clickable)d.onclick=()=>playCard(c.id);
+  return d;
+}
+function renderMyHand(){
+  if(!GS)return;
+  const myIdx=GS.players.findIndex(p=>p.id===myId);
+  const isMyTurn=myIdx===GS.currentIdx&&GS.phase==='playing';
+  const area=document.getElementById('my-hand-area');
+  area.className='my-hand-area'+(isMyTurn?' my-turn':'');
+  document.getElementById('my-card-cnt').textContent=myHand.length;
+  const badge=document.getElementById('my-turn-badge');
+  badge.innerHTML=isMyTurn?'<span class="badge badge-green">ตาของคุณ!</span>':'';
+  const row=document.getElementById('my-cards');row.innerHTML='';
+  myHand.forEach(c=>{
+    const playable=isMyTurn&&!GS.waitColor&&canPlay(c,GS.currentColor,GS.currentValue);
+    row.appendChild(renderCardEl(c,playable,false));
+  });
+  document.getElementById('btn-draw').disabled=!isMyTurn||!!GS.waitColor;
+  document.getElementById('btn-uno').disabled=myHand.length!==2||!isMyTurn;
+  document.getElementById('color-picker').style.display=(isMyTurn&&GS.waitColor)?'flex':'none';
+}
+function renderOpponents(){
+  if(!GS)return;
+  const myIdx=GS.players.findIndex(p=>p.id===myId);
+  const area=document.getElementById('opponents-area');area.innerHTML='';
+  GS.players.forEach((p,i)=>{
+    if(p.id===myId)return;
+    const isActive=i===GS.currentIdx;
+    const div=document.createElement('div');
+    div.className='opponent-card'+(isActive?' active-turn':'');
+    const backs=Array(p.handCount).fill('<div class="card-mini"></div>').join('');
+    div.innerHTML=`<div class="opp-name">${p.name}${isActive?'<span class="badge badge-green" style="font-size:10px">ตา</span>':''}<span style="margin-left:auto;font-size:11px;color:var(--text3)">${p.handCount} ใบ</span>${p.handCount===1?'<span class="badge badge-amber" style="font-size:10px">UNO!</span>':''}</div><div class="opp-cards">${backs}</div>`;
+    area.appendChild(div);
+  });
+}
+function renderDiscard(){
+  if(!GS)return;
+  const top=GS.discardTop||GS.discard?.[GS.discard.length-1];
+  if(!top)return;
+  const el=renderCardEl(top,false,false);
+  const dt=document.getElementById('discard-card');
+  dt.innerHTML=el.innerHTML;dt.style.background=el.style.background;dt.className=el.className;
+  document.getElementById('deck-cnt').textContent=GS.deckCount||GS.deck?.length||0;
+}
+function renderStatus(){
+  if(!GS)return;
+  const cur=GS.players[GS.currentIdx];
+  document.getElementById('turn-name').textContent=cur?.name||'-';
+  document.getElementById('cur-color-txt').textContent=CNAME[GS.currentColor]||GS.currentColor;
+  document.getElementById('dir-txt').textContent=GS.direction===1?'→':'←';
+  const unoAlert=document.getElementById('uno-alert');
+  const hasUno=GS.players.some((p,i)=>{
+    const cnt=p.id===myId?myHand.length:p.handCount;
+    return cnt===1;
+  });
+  unoAlert.style.display=hasUno?'block':'none';
+}
+function renderGame(){
+  renderStatus();renderOpponents();renderDiscard();renderMyHand();
+}
+function showLog(){document.getElementById('game-log').scrollTop=document.getElementById('game-log').scrollHeight;}
+
+// ===== WIN SCREEN =====
+function showWinner(msg){
+  document.getElementById('win-title').textContent=`🏆 ${msg.winner} ชนะ!`;
+  document.getElementById('win-sub').textContent='ผลคะแนน';
+  const sl=document.getElementById('win-scores');sl.innerHTML='';
+  msg.scores.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='score-row';
+    d.innerHTML=`<span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${s.name}</span><span>${s.cards} ใบเหลือ</span>`;
+    sl.appendChild(d);
+  });
+  document.getElementById('overlay-win').classList.add('show');
+}
+
+// ===== NAVIGATION =====
+function backToLobby(){
+  document.getElementById('overlay-win').classList.remove('show');
+  if(peer){peer.destroy();peer=null;}
+  connections={};roomPlayers=[];GS=null;myHand=[];isHost=false;gamePhase='lobby';
+  showScreen('lobby');
+}
+function leaveGame(){if(confirm('ออกจากเกมใช่ไหม?'))backToLobby();}
+
+// ===== URL AUTOFILL =====
+const urlParams=new URLSearchParams(window.location.search);
+const autoCode=urlParams.get('room');
+if(autoCode){document.getElementById('join-code').value=autoCode;document.getElementById('lobby-status').textContent='มีรหัสห้องอัตโนมัติ กด "เข้าร่วม"';}
+
+
+</script>
+</body>
+</html>
