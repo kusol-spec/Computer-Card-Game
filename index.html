@@ -115,6 +115,22 @@ input[type=text]:focus{border-color:var(--blue)}
 
 /* ===== TOAST ===== */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 18px;font-size:13px;color:#f1f5f9;display:none;z-index:200;pointer-events:none}
+
+/* ===== CARD TOOLTIP ===== */
+.card-wrap{position:relative;display:inline-block}
+.card-wrap .tip{
+  display:none;position:absolute;bottom:108%;left:50%;transform:translateX(-50%);
+  width:200px;background:#0f172a;border:1px solid #334155;border-radius:10px;
+  padding:10px 12px;z-index:50;pointer-events:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.6);
+}
+.card-wrap:hover .tip,.card-wrap.tip-show .tip{display:block}
+.tip-name{font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:4px}
+.tip-role{font-size:11px;color:#94a3b8;line-height:1.5;margin-bottom:5px}
+.tip-effect{font-size:10px;color:#22c55e;background:#14532d22;border:1px solid #14532d;border-radius:5px;padding:3px 7px}
+.tip-arrow{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+  width:10px;height:6px;background:#0f172a;clip-path:polygon(0 0,100% 0,50% 100%);
+  border-left:1px solid #334155;border-right:1px solid #334155}
 </style>
 </head>
 <body>
@@ -248,6 +264,24 @@ const CHEX={red:'#ef4444',blue:'#3b82f6',green:'#22c55e',yellow:'#f59e0b'};
 const PARTS=['CPU','RAM','GPU','HDD','PSU','MOBO','CASE','MON','KB','MOUSE'];
 const PICO={CPU:'⚙️',RAM:'💾',GPU:'🖼️',HDD:'💿',PSU:'🔌',MOBO:'🔧',CASE:'🗄️',MON:'🖥️',KB:'⌨️',MOUSE:'🖱️'};
 
+
+const PART_INFO={
+  MON:{name:'จอภาพ (Monitor)',role:'อุปกรณ์แสดงผลข้อมูลออกมาเป็นภาพ ตัวอักษร และภาพเคลื่อนไหว มีลักษณะคล้ายโทรทัศน์',effect:'ดูไพ่ 1 ใบจากมือของผู้เล่นคนอื่น'},
+  CASE:{name:'เคส (Case)',role:'ทำหน้าที่ป้องกันอุปกรณ์ภายในจากสิ่งแวดล้อม ค้างไม่ให้เดินได้ ภายในมีที่ตั้งเครื่องอ่านแผ่น CD-ROM ปุ่ม Power และ Restart',effect:'บังคับผู้เล่นต่อไปหยุดเล่น 1 ตา (เหมือน Skip)'},
+  PSU:{name:'แหล่งจ่ายไฟ (Power Supply)',role:'แปลงไฟบ้านให้เป็นไฟที่เหมาะกับเครื่องคอมพิวเตอร์ และจ่ายกระแสไฟให้กับอุปกรณ์ คอมพิวเตอร์ทุกชิ้น',effect:'เปลี่ยนสีที่ใช้ได้ตามต้องการ (เหมือน Wild)'},
+  KB:{name:'แป้นพิมพ์ (Keyboard)',role:'เป็นอุปกรณ์รับข้อมูล มีจำนวนแป้นหลายแบบ ทั้งแป้นตัวเลข แป้นพิเศษ แป้นตัวอักษร หรือแป้นแบบความต้องการต่างๆ',effect:'สลับมือไพ่กับผู้เล่นคนที่เลือก'},
+  MOUSE:{name:'เมาส์ (Mouse)',role:'เป็นอุปกรณ์รับข้อมูล ช่วยการชี้ตำแหน่ง เรียกว่า "ตัวชี้ตำแหน่ง (Pointer)" ใช้แทนการเลื่อนเมนู',effect:'ขโมยไพ่ 1 ใบจากมือผู้เล่นคนอื่น'},
+  MOBO:{name:'เมนบอร์ด (Main Board)',role:'เป็นแผ่นวงจรไฟฟ้าหลัก ที่รวมเอาอิเล็กทรอนิกส์ที่สำคัญไว้ด้วยกัน เป็นส่วนที่ทำงานของ CPU การทำงานของอุปกรณ์ต่างๆ',effect:'จั่วไพ่เพิ่ม 2 ใบ แล้วทิ้งไพ่ 1 ใบ'},
+  CPU:{name:'ซีพียู (CPU)',role:'เรียกอีกชื่อว่า โปรเซสเซอร์ (Processor) หรือ ชิป (Chip) เป็นอุปกรณ์ที่มีความสำคัญที่สุดของคอมพิวเตอร์ ทำหน้าที่ประมวลผลคำสั่งและข้อมูล',effect:'เล่นต่อได้อีก 1 ตาทันที (ตาพิเศษ)'},
+  GPU:{name:'การ์ดจอ (VGA Card)',role:'ส่งข้อมูลจากคอมพิวเตอร์ไปแสดงผลบนจอภาพ ยิ่งการ์ดจอดีจะยิ่งแสดงผลได้สวยงามและรวดเร็ว',effect:'บังคับผู้เล่นทุกคนจั่วไพ่คนละ 1 ใบ'},
+  RAM:{name:'แรม (RAM)',role:'Random-Access Memory เป็นหน่วยความจำหลักชั่วคราว ใช้เก็บข้อมูลโปรแกรมที่กำลังทำงาน โดยอาศัยกระแสไฟฟ้า',effect:'มองดูไพ่ทั้งหมดในมือตัวเองได้ไม่จำกัด (ไม่มีผล)'},
+  HDD:{name:'ฮาร์ดดิสก์ (Harddisk)',role:'ใช้สำหรับบันทึกข้อมูลหรือโปรแกรมต่างๆ เก็บข้อมูลได้แม้ปิดเครื่อง เป็นหน่วยความจำถาวร',effect:'ดูและสับไพ่ในกองจั่วได้ 1 ครั้ง'},
+};
+function getPartInfo(c){
+  if(['skip','reverse','draw2','wild','wild4'].includes(c.value))return null;
+  const part=PARTS[parseInt(c.value)%10];
+  return PART_INFO[part]||null;
+}
 function mkCard(c,v,id){return{color:c,value:v,id:id||Math.random().toString(36).slice(2)}}
 function buildDeck(){
   let d=[];
@@ -720,13 +754,34 @@ function sayUno(){
 }
 
 // ===== RENDER GAME =====
+function buildTooltip(c){
+  const info=getPartInfo(c);
+  if(!info)return'';
+  return `<div class="tip">
+    <div class="tip-name">${info.name}</div>
+    <div class="tip-role">${info.role}</div>
+    <div class="tip-effect">🎮 ${info.effect}</div>
+    <div class="tip-arrow"></div>
+  </div>`;
+}
 function renderCardEl(c,clickable,sel){
-  const d=document.createElement('div');
-  d.className='card'+(clickable?' clickable playable':'')+(sel?' selected':'');
-  d.style.background=cardBg(c);
-  d.innerHTML=`<div class="cv">${cardValLabel(c)}</div><div class="ci">${cardSvg(c)}</div><div class="cn">${cardSub(c)}</div><div class="cv2">${cardValLabel(c)}</div>`;
-  if(clickable)d.onclick=()=>playCard(c.id);
-  return d;
+  const card=document.createElement('div');
+  card.className='card'+(clickable?' clickable playable':'')+(sel?' selected':'');
+  card.style.background=cardBg(c);
+  card.innerHTML=`<div class="cv">${cardValLabel(c)}</div><div class="ci">${cardSvg(c)}</div><div class="cn">${cardSub(c)}</div><div class="cv2">${cardValLabel(c)}</div>`;
+  if(clickable)card.onclick=()=>playCard(c.id);
+  const info=getPartInfo(c);
+  if(!info)return card;
+  // wrap in tooltip container
+  const wrap=document.createElement('div');
+  wrap.className='card-wrap';
+  wrap.innerHTML=buildTooltip(c);
+  wrap.insertBefore(card,wrap.firstChild);
+  // long-press for mobile
+  let pressTimer;
+  wrap.addEventListener('touchstart',()=>{pressTimer=setTimeout(()=>wrap.classList.toggle('tip-show'),400)},{passive:true});
+  wrap.addEventListener('touchend',()=>clearTimeout(pressTimer),{passive:true});
+  return wrap;
 }
 function renderMyHand(){
   if(!GS)return;
