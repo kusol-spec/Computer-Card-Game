@@ -75,12 +75,12 @@ input[type=text]:focus{border-color:var(--blue)}
 .card.clickable:hover{transform:translateY(-6px)}
 .card.playable{border-color:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5)}
 .card.selected{transform:translateY(-12px) !important;border-color:var(--amber);box-shadow:0 0 10px rgba(245,158,11,.5)}
-.card-back-style{background:#1e3a5f;border:2px solid #2563eb}
-.card-back-style::after{content:'💻';font-size:24px}
-.cv{font-size:9px;position:absolute;top:4px;left:5px;line-height:1}
-.cv2{font-size:9px;position:absolute;bottom:4px;right:5px;transform:rotate(180deg)}
-.ci{font-size:22px;text-align:center}
-.cn{font-size:8px;position:absolute;bottom:16px;text-align:center;width:100%;color:rgba(255,255,255,.85)}
+.card-back-style{background:linear-gradient(135deg,#0f2a4a 0%,#1a3a6a 50%,#0f2a4a 100%);border:2px solid #2563eb}
+.cv{font-size:8px;font-weight:700;position:absolute;top:3px;left:5px;line-height:1;color:rgba(255,255,255,0.9);text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.cv2{font-size:8px;font-weight:700;position:absolute;bottom:3px;right:5px;transform:rotate(180deg);color:rgba(255,255,255,0.9);text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.ci{display:flex;align-items:center;justify-content:center;width:100%;height:52px}
+.ci svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+.cn{font-size:7px;font-weight:600;position:absolute;bottom:14px;text-align:center;width:100%;color:rgba(255,255,255,.9);letter-spacing:.3px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .pile-label{font-size:11px;color:var(--text3);text-align:center;margin-top:4px}
 
 .my-hand-area{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
@@ -183,7 +183,13 @@ input[type=text]:focus{border-color:var(--blue)}
 
   <div class="pile-area">
     <div>
-      <div class="card card-back-style clickable" id="draw-pile-card" onclick="drawCard()" title="จั่วไพ่"></div>
+      <div class="card card-back-style clickable" id="draw-pile-card" onclick="drawCard()" title="จั่วไพ่">
+        <svg width="36" height="36" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" style="opacity:.7">
+          <rect x="8" y="6" width="28" height="32" rx="3" fill="none" stroke="#60a5fa" stroke-width="2"/>
+          <rect x="12" y="10" width="20" height="24" rx="2" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="22" y="27" text-anchor="middle" font-size="12" font-weight="900" fill="#60a5fa">💻</text>
+        </svg>
+      </div>
       <div class="pile-label">จั่ว (<span id="deck-cnt">0</span>)</div>
     </div>
     <div>
@@ -254,20 +260,117 @@ function buildDeck(){
 }
 function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function cardBg(c){
-  if(c.color==='wild')return'conic-gradient(#ef4444 0 25%,#3b82f6 25% 50%,#22c55e 50% 75%,#f59e0b 75%)';
-  return CHEX[c.color]||'#555';
+  const grad={
+    red:'linear-gradient(160deg,#dc2626 0%,#b91c1c 100%)',
+    blue:'linear-gradient(160deg,#2563eb 0%,#1d4ed8 100%)',
+    green:'linear-gradient(160deg,#16a34a 0%,#15803d 100%)',
+    yellow:'linear-gradient(160deg,#d97706 0%,#b45309 100%)',
+    wild:'linear-gradient(135deg,#dc2626 0%,#dc2626 25%,#2563eb 25%,#2563eb 50%,#16a34a 50%,#16a34a 75%,#d97706 75%)'
+  };
+  return grad[c.color]||'#555';
 }
-function cardIcon(c){
-  const sico={skip:'🚫',reverse:'🔄',draw2:'✌️',wild:'🌈',wild4:'🌈'};
-  if(sico[c.value])return sico[c.value];
-  return PICO[PARTS[parseInt(c.value)%10]]||c.value;
+function svgWrap(inner,w=44,h=44){return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;}
+function cardSvg(c){
+  // Special cards
+  if(c.value==='draw2'){
+    // Diamond shape like PDF +2
+    return svgWrap(`<polygon points="22,2 40,22 22,42 4,22" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+      <polygon points="22,8 36,22 22,36 8,22" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5"/>
+      <text x="22" y="27" text-anchor="middle" font-size="13" font-weight="900" fill="white" stroke="rgba(0,0,0,.3)" stroke-width=".5">+2</text>`);
+  }
+  if(c.value==='wild4'){
+    // Heart shape like PDF
+    return svgWrap(`<path d="M22 38 C22 38 4 26 4 16 C4 10 9 6 14 6 C17 6 20 8 22 10 C24 8 27 6 30 6 C35 6 40 10 40 16 C40 26 22 38 22 38Z" fill="none" stroke="white" stroke-width="2.5"/>
+      <path d="M22 34 C22 34 8 23 8 15 C8 11 11 9 14 9 C17 9 20 11 22 13 C24 11 27 9 30 9 C33 9 36 11 36 15 C36 23 22 34 22 34Z" fill="rgba(255,255,255,.3)"/>
+      <text x="22" y="28" text-anchor="middle" font-size="9" font-weight="900" fill="white">+4</text>`);
+  }
+  if(c.value==='wild'){
+    // Heart shape without number
+    return svgWrap(`<path d="M22 38 C22 38 4 26 4 16 C4 10 9 6 14 6 C17 6 20 8 22 10 C24 8 27 6 30 6 C35 6 40 10 40 16 C40 26 22 38 22 38Z" fill="none" stroke="white" stroke-width="2.5"/>
+      <path d="M22 34 C22 34 8 23 8 15 C8 11 11 9 14 9 C17 9 20 11 22 13 C24 11 27 9 30 9 C33 9 36 11 36 15 C36 23 22 34 22 34Z" fill="rgba(255,255,255,.3)"/>`);
+  }
+  if(c.value==='skip'){
+    // Circle with slash like PDF
+    return svgWrap(`<circle cx="22" cy="22" r="17" fill="none" stroke="white" stroke-width="3"/>
+      <circle cx="22" cy="22" r="10" fill="rgba(255,255,255,.2)" stroke="white" stroke-width="2"/>
+      <line x1="8" y1="36" x2="36" y2="8" stroke="white" stroke-width="3" stroke-linecap="round"/>`);
+  }
+  if(c.value==='reverse'){
+    // S-loop like PDF
+    return svgWrap(`<path d="M30 10 C38 10 38 20 30 20 C22 20 14 20 14 28 C14 36 22 36 30 36" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M14 18 C6 18 6 10 14 10" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M10 7 L14 11 L18 7" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M26 39 L30 35 L34 39" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
+  }
+  // Number cards — computer parts SVG
+  const part=PARTS[parseInt(c.value)%10];
+  const svgs={
+    MON: `<rect x="6" y="8" width="32" height="22" rx="2" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="14" y="30" width="16" height="3" fill="rgba(255,255,255,.5)"/>
+          <rect x="10" y="33" width="24" height="2" rx="1" fill="white"/>
+          <rect x="9" y="11" width="26" height="16" rx="1" fill="rgba(255,255,255,.15)"/>`,
+    CASE:`<rect x="10" y="5" width="24" height="34" rx="3" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="14" y="10" width="8" height="5" rx="1" fill="rgba(255,255,255,.5)"/>
+          <circle cx="22" cy="20" r="3" fill="none" stroke="white" stroke-width="2"/>
+          <rect x="14" y="26" width="16" height="2" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="14" y="30" width="10" height="2" rx="1" fill="rgba(255,255,255,.3)"/>`,
+    PSU: `<rect x="7" y="10" width="30" height="24" rx="3" fill="none" stroke="white" stroke-width="2.5"/>
+          <circle cx="22" cy="22" r="7" fill="none" stroke="white" stroke-width="2"/>
+          <circle cx="22" cy="22" r="3" fill="rgba(255,255,255,.4)"/>
+          <line x1="22" y1="10" x2="22" y2="14" stroke="white" stroke-width="2"/>
+          <line x1="22" y1="30" x2="22" y2="34" stroke="white" stroke-width="2"/>`,
+    KB:  `<rect x="4" y="14" width="36" height="18" rx="3" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="7" y="17" width="5" height="4" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="14" y="17" width="5" height="4" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="21" y="17" width="5" height="4" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="28" y="17" width="5" height="4" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="10" y="24" width="24" height="4" rx="1" fill="rgba(255,255,255,.4)"/>`,
+    MOUSE:`<path d="M22 8 C14 8 10 14 10 22 C10 32 15 38 22 38 C29 38 34 32 34 22 C34 14 30 8 22 8Z" fill="none" stroke="white" stroke-width="2.5"/>
+           <line x1="22" y1="8" x2="22" y2="24" stroke="white" stroke-width="2"/>
+           <circle cx="22" cy="18" r="2.5" fill="rgba(255,255,255,.5)"/>`,
+    MOBO:`<rect x="5" y="5" width="34" height="34" rx="2" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="9" y="9" width="10" height="8" rx="1" fill="rgba(255,255,255,.3)"/>
+          <rect x="22" y="9" width="14" height="5" rx="1" fill="rgba(255,255,255,.2)"/>
+          <line x1="9" y1="21" x2="35" y2="21" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+          <line x1="9" y1="27" x2="35" y2="27" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+          <rect x="9" y="30" width="26" height="6" rx="1" fill="rgba(255,255,255,.15)"/>`,
+    CPU: `<rect x="10" y="10" width="24" height="24" rx="2" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="15" y="15" width="14" height="14" rx="1" fill="rgba(255,255,255,.2)" stroke="white" stroke-width="1.5"/>
+          <line x1="14" y1="6" x2="14" y2="10" stroke="white" stroke-width="2"/><line x1="18" y1="6" x2="18" y2="10" stroke="white" stroke-width="2"/>
+          <line x1="22" y1="6" x2="22" y2="10" stroke="white" stroke-width="2"/><line x1="26" y1="6" x2="26" y2="10" stroke="white" stroke-width="2"/>
+          <line x1="14" y1="38" x2="14" y2="34" stroke="white" stroke-width="2"/><line x1="18" y1="38" x2="18" y2="34" stroke="white" stroke-width="2"/>
+          <line x1="22" y1="38" x2="22" y2="34" stroke="white" stroke-width="2"/><line x1="26" y1="38" x2="26" y2="34" stroke="white" stroke-width="2"/>
+          <line x1="6" y1="18" x2="10" y2="18" stroke="white" stroke-width="2"/><line x1="6" y1="26" x2="10" y2="26" stroke="white" stroke-width="2"/>
+          <line x1="38" y1="18" x2="34" y2="18" stroke="white" stroke-width="2"/><line x1="38" y1="26" x2="34" y2="26" stroke="white" stroke-width="2"/>`,
+    GPU: `<rect x="4" y="14" width="36" height="18" rx="3" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="10" y="18" width="14" height="10" rx="2" fill="rgba(255,255,255,.2)" stroke="white" stroke-width="1.5"/>
+          <circle cx="33" cy="23" r="4" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="10" y1="32" x2="10" y2="36" stroke="white" stroke-width="2"/><line x1="15" y1="32" x2="15" y2="36" stroke="white" stroke-width="2"/>
+          <line x1="20" y1="32" x2="20" y2="36" stroke="white" stroke-width="2"/>`,
+    RAM: `<rect x="12" y="8" width="20" height="30" rx="2" fill="none" stroke="white" stroke-width="2.5"/>
+          <rect x="15" y="14" width="4" height="4" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="21" y="14" width="4" height="4" rx="1" fill="rgba(255,255,255,.4)"/>
+          <rect x="15" y="21" width="4" height="4" rx="1" fill="rgba(255,255,255,.3)"/>
+          <rect x="21" y="21" width="4" height="4" rx="1" fill="rgba(255,255,255,.3)"/>
+          <line x1="10" y1="35" x2="34" y2="35" stroke="white" stroke-width="2"/>`,
+    HDD: `<rect x="7" y="11" width="30" height="22" rx="4" fill="none" stroke="white" stroke-width="2.5"/>
+          <circle cx="22" cy="22" r="7" fill="none" stroke="white" stroke-width="2"/>
+          <circle cx="22" cy="22" r="2.5" fill="rgba(255,255,255,.5)"/>
+          <rect x="30" y="15" width="4" height="3" rx="1" fill="rgba(255,255,255,.5)"/>
+          <rect x="30" y="20" width="4" height="3" rx="1" fill="rgba(255,255,255,.4)"/>`,
+  };
+  return svgWrap(svgs[part]||`<text x="22" y="26" text-anchor="middle" font-size="11" fill="white">${part}</text>`);
 }
+function cardIcon(c){return cardSvg(c);}
 function cardSub(c){
   const s={skip:'Skip',reverse:'Rev',draw2:'+2',wild:'Wild',wild4:'Wild+4'};
   if(s[c.value])return s[c.value];
   return PARTS[parseInt(c.value)%10];
 }
-function cardValLabel(c){if(c.color==='wild'||c.value==='wild4')return'🌈';return c.value;}
+function cardValLabel(c){
+  const lbl={skip:'⊘',reverse:'↺',draw2:'+2',wild:'W',wild4:'W4'};
+  return lbl[c.value]||c.value;
+}
 function canPlay(c,curColor,curValue){
   if(c.color==='wild')return true;
   if(c.color===curColor)return true;
@@ -621,7 +724,7 @@ function renderCardEl(c,clickable,sel){
   const d=document.createElement('div');
   d.className='card'+(clickable?' clickable playable':'')+(sel?' selected':'');
   d.style.background=cardBg(c);
-  d.innerHTML=`<div class="cv">${cardValLabel(c)}</div><div class="ci">${cardIcon(c)}</div><div class="cn">${cardSub(c)}</div><div class="cv2">${cardValLabel(c)}</div>`;
+  d.innerHTML=`<div class="cv">${cardValLabel(c)}</div><div class="ci">${cardSvg(c)}</div><div class="cn">${cardSub(c)}</div><div class="cv2">${cardValLabel(c)}</div>`;
   if(clickable)d.onclick=()=>playCard(c.id);
   return d;
 }
